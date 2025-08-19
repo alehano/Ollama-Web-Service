@@ -6,8 +6,6 @@ This setup adds a FastAPI-based gateway in front of the Ollama service, requirin
 
 1. **Build and Start Services**
 
-From the `gemma3` directory, run:
-
 ```bash
 docker compose up --build
 ```
