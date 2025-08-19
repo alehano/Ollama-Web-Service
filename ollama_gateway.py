@@ -13,7 +13,7 @@ async def proxy(request: Request, path: str):
     if not auth or auth != f"Bearer {BEARER_TOKEN}":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or missing token")
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=None) as client:
         url = f"{OLLAMA_URL}/{path}"
         method = request.method
         body = await request.body()
@@ -21,5 +21,10 @@ async def proxy(request: Request, path: str):
         headers.pop("host", None)
         # Remove authorization header before proxying
         headers.pop("authorization", None)
-        resp = await client.request(method, url, content=body, headers=headers, params=dict(request.query_params))
+        try:
+            resp = await client.request(method, url, content=body, headers=headers, params=dict(request.query_params))
+        except httpx.TimeoutException:
+            raise HTTPException(status_code=504, detail="Upstream service timeout (Ollama)")
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=502, detail=f"Upstream service error: {exc}")
         return Response(content=resp.content, status_code=resp.status_code, headers=dict(resp.headers))
